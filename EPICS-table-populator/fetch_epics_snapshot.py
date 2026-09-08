@@ -28,11 +28,19 @@ from requests import RequestException
 
 from epics_schema import (
     DEFAULT_MAP,
-    DEFAULT_TYPES,
+    DEFAULT_SNAPSHOT_DIR,
     MappedColumn,
     coerce_value,
     load_mapped_columns,
 )
+
+PROBLEM_LEVELS = {
+    "query_error": "ERROR",
+    "type_mismatch": "ERROR",
+    "overflow": "ERROR",
+    "missing": "WARNING",
+    "disconnect": "WARNING",
+}
 
 try:
     from jlab_archiver_client import Point, PointQuery
@@ -277,6 +285,64 @@ def write_report(
         )
 
 
+def snapshot_stem(query_time: datetime, run_number: int | None) -> str:
+    stamp = query_time.strftime("%Y%m%d_%H%M%S")
+    if run_number is not None:
+        return f"run{run_number}_{stamp}"
+    return stamp
+
+
+def default_snapshot_paths(
+    query_time: datetime, run_number: int | None
+) -> tuple[Path, Path]:
+    DEFAULT_SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    stem = snapshot_stem(query_time, run_number)
+    return (
+        DEFAULT_SNAPSHOT_DIR / f"snapshot_{stem}.txt",
+        DEFAULT_SNAPSHOT_DIR / f"unavailable_{stem}.txt",
+    )
+
+
+def problem_rows(rows: list[SnapshotRow]) -> list[SnapshotRow]:
+    return [row for row in rows if row.status in PROBLEM_LEVELS]
+
+
+def write_unavailable_report(
+    out: TextIO,
+    *,
+    rows: list[SnapshotRow],
+    query_time: datetime,
+    mya_time: datetime,
+    run_number: int | None,
+) -> None:
+    problems = problem_rows(rows)
+    out.write("# Unavailable / problem PVs from epics_column_pv_map.txt\n")
+    out.write(f"# query_time_local\t{query_time.isoformat()}\n")
+    out.write(f"# mya_query_time\t{mya_time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+    if run_number is not None:
+        out.write(f"# run_number\t{run_number}\n")
+    out.write(f"# problem_count\t{len(problems)}\n")
+    out.write("#\n")
+    out.write(
+        f"{'level':<8}  {'status':<14}  {'column':<28}  {'pv':<32}  note\n"
+    )
+    for row in problems:
+        level = PROBLEM_LEVELS[row.status]
+        out.write(
+            f"{level:<8}  {row.status:<14}  {row.mapped.column:<28}  "
+            f"{row.mapped.pv:<32}  {row.note}\n"
+        )
+
+
+def print_unavailable_warnings(rows: list[SnapshotRow]) -> None:
+    for row in problem_rows(rows):
+        level = PROBLEM_LEVELS[row.status]
+        print(
+            f"{level}: {row.status}  {row.mapped.column}  {row.mapped.pv}  {row.note}",
+            file=sys.stderr,
+        )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -306,11 +372,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-o",
         "--output",
-        default="epics_snapshot.txt",
-        help="Output TSV path (default: epics_snapshot.txt).",
+        help="Full snapshot TSV path (default: snapshots/snapshot_<time>.txt).",
     )
-    parser.add_argument("--map", type=Path, default=DEFAULT_MAP, help="Column↔PV TSV.")
-    parser.add_argument("--types", type=Path, default=DEFAULT_TYPES, help="Column SQL-type TSV.")
+    parser.add_argument(
+        "--unavailable-output",
+        help="Warning/error report path (default: snapshots/unavailable_<time>.txt).",
+    )
+    parser.add_argument("--map", type=Path, default=DEFAULT_MAP, help="Column↔PV map.")
     parser.add_argument(
         "--limit",
         type=int,
@@ -344,7 +412,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    columns = load_mapped_columns(args.map, args.types)
+    columns = load_mapped_columns(args.map)
 
     if args.columns:
         wanted = {name.strip() for name in args.columns.split(",") if name.strip()}
@@ -379,7 +447,14 @@ def main(argv: list[str] | None = None) -> int:
         enums_as_strings=not args.enums_as_ints,
     )
 
-    out_path = Path(args.output)
+    default_snap, default_unavail = default_snapshot_paths(query_time, args.run_number)
+    out_path = Path(args.output) if args.output else default_snap
+    unavail_path = (
+        Path(args.unavailable_output) if args.unavailable_output else default_unavail
+    )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    unavail_path.parent.mkdir(parents=True, exist_ok=True)
+
     with out_path.open("w", encoding="utf-8") as handle:
         write_report(
             handle,
@@ -388,6 +463,15 @@ def main(argv: list[str] | None = None) -> int:
             mya_time=mya_time,
             args=args,
         )
+    with unavail_path.open("w", encoding="utf-8") as handle:
+        write_unavailable_report(
+            handle,
+            rows=rows,
+            query_time=query_time,
+            mya_time=mya_time,
+            run_number=args.run_number,
+        )
+    print_unavailable_warnings(rows)
 
     counts: dict[str, int] = {}
     for row in rows:
@@ -397,6 +481,7 @@ def main(argv: list[str] | None = None) -> int:
         for status in ("ok", "missing", "disconnect", "type_mismatch", "overflow", "query_error")
     )
     print(f"Wrote {out_path}  ({len(rows)} PVs; {summary})", file=sys.stderr)
+    print(f"Wrote {unavail_path}  ({len(problem_rows(rows))} problems)", file=sys.stderr)
     return 0 if counts.get("query_error", 0) == 0 else 1
 
 
