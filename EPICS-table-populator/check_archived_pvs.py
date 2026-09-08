@@ -3,7 +3,7 @@
 
 Reads epics_column_pv_map.txt (the single source of truth), queries MYA
 Point for each confirmed PV, prints ERROR/WARNING lines, and writes
-snapshots/unavailable_<time>.txt. Does not write to hamoller.
+snapshots/problems/unavailable_<time>.txt. Does not write to hamoller.
 
   python check_archived_pvs.py --time "2025-07-10 12:08:06"
 """
@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     parser.description = (
         "Report mapped PVs that are missing, disconnected, or not in MYA. "
-        "Writes snapshots/unavailable_<time>.txt and prints ERROR/WARNING lines."
+        "Writes snapshots/problems/unavailable_<time>.txt and prints ERROR/WARNING lines."
     )
     args = parser.parse_args(argv)
     columns = load_mapped_columns(args.map)

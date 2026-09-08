@@ -11,6 +11,7 @@ from typing import Any
 HERE = Path(__file__).resolve().parent
 DEFAULT_MAP = HERE / "epics_column_pv_map.txt"
 DEFAULT_SNAPSHOT_DIR = HERE / "snapshots"
+DEFAULT_PROBLEMS_DIR = DEFAULT_SNAPSHOT_DIR / "problems"
 
 _FIELD_SPLIT = re.compile(r"\s{2,}")
 

@@ -8,9 +8,9 @@ archiver clients.
 ## Current status
 
 `epics_column_pv_map.txt` is the **single source of truth** (column, PV,
-SQL type, description). Fetch writes a full snapshot plus an unavailable-PV
-report under `snapshots/` so a later DB insert always has a text backup.
-There is no MariaDB insert yet.
+SQL type, description). Fetch writes a full snapshot under `snapshots/`
+and an unavailable-PV report under `snapshots/problems/` so a later DB
+insert always has a text backup. There is no MariaDB insert yet.
 
 ## Fetch a snapshot (test onsite)
 
@@ -70,7 +70,7 @@ If you would rather not activate at all:
 # Inspect the 100 confirmed pairs without querying MYA
 python fetch_epics_snapshot.py --list-map
 
-# Snapshot + unavailable report (defaults into snapshots/)
+# Snapshot in snapshots/; problems in snapshots/problems/
 python fetch_epics_snapshot.py --time "Thu Jul 10 12:08:06 PM EDT 2025" --run-number 12345
 
 # Warnings/errors only for mapped PVs MYA cannot serve
@@ -88,12 +88,12 @@ returns the event **at or before** that timestamp (same idea as the old ADC
 `.set` print). Empty, disconnect, and type-mismatch values are written as
 `NULL` plus a status/note — nothing is invented.
 
-Every fetch writes two text files (gitignored under `snapshots/`):
+Every fetch writes two text files (gitignored `*.txt`):
 
-- `snapshot_<time>.txt` — full typed TSV (backup if hamoller is down)
-- `unavailable_<time>.txt` — ERROR/WARNING rows only
+- `snapshots/snapshot_<time>.txt` — full typed TSV (backup if hamoller is down)
+- `snapshots/problems/unavailable_<time>.txt` — ERROR/WARNING rows only
 
-`check_archived_pvs.py` writes the unavailable file and prints those lines
+`check_archived_pvs.py` writes the problems file and prints those lines
 to the terminal. `query_error` is an ERROR (name not in MYA). `disconnect`
 is a WARNING (in the archive, but IOC was down at that time).
 
@@ -159,9 +159,10 @@ point.run()
 | `schema/don_set_up_mariadb.proposed.sh` | Same script with EPICS_data updates to send Don (`[PV: …]` comments kept). |
 | `epics_column_pv_map.txt` | **Base file** for fetch/insert. Space-aligned `column`, `pv`, `sql_type`, `description`. Matches the proposed schema (live hamoller still has `epics_n_pass` until Don applies it). |
 | `epics_schema.py` | Map parser and light coerce (empty → `NULL`; no invented values). |
-| `fetch_epics_snapshot.py` | MYA point query → `snapshots/snapshot_*.txt` plus unavailable report. No database writes. |
-| `check_archived_pvs.py` | Prints ERROR/WARNING for mapped PVs MYA cannot serve; writes `snapshots/unavailable_*.txt`. |
-| `snapshots/` | Text backups of each fetch (gitignored `*.txt`). |
+| `fetch_epics_snapshot.py` | MYA point query → `snapshots/snapshot_*.txt` plus `snapshots/problems/unavailable_*.txt`. No database writes. |
+| `check_archived_pvs.py` | Prints ERROR/WARNING for mapped PVs MYA cannot serve; writes `snapshots/problems/unavailable_*.txt`. |
+| `snapshots/` | Typed snapshot TSVs (gitignored `*.txt`). |
+| `snapshots/problems/` | Unavailable / error reports (gitignored `*.txt`). |
 | `requirements.txt` | `jlab-archiver-client`. |
 
 Mapping was matched against `EPICS_data` `COLUMN_COMMENT` `[PV: …]` values
@@ -195,7 +196,7 @@ Keep it boring. After the snapshot TSV looks right:
 3. Select candidate runs from `Run_info` (has start time; optionally
    skip rows that already have `EPICS_data`).
 4. For each run, query MYA at `run_start` (unix → datetime). Write
-   `snapshots/snapshot_*.txt` and `unavailable_*.txt`. Leave missing /
+   `snapshots/snapshot_*.txt` and `snapshots/problems/unavailable_*.txt`. Leave missing /
    disconnected / type-mismatch columns `NULL`.
 5. Insert one row. Default: **do not overwrite** an existing
    `EPICS_data` row unless `--force` (or similar) is passed.

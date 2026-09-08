@@ -28,6 +28,7 @@ from requests import RequestException
 
 from epics_schema import (
     DEFAULT_MAP,
+    DEFAULT_PROBLEMS_DIR,
     DEFAULT_SNAPSHOT_DIR,
     MappedColumn,
     coerce_value,
@@ -296,10 +297,11 @@ def default_snapshot_paths(
     query_time: datetime, run_number: int | None
 ) -> tuple[Path, Path]:
     DEFAULT_SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    DEFAULT_PROBLEMS_DIR.mkdir(parents=True, exist_ok=True)
     stem = snapshot_stem(query_time, run_number)
     return (
         DEFAULT_SNAPSHOT_DIR / f"snapshot_{stem}.txt",
-        DEFAULT_SNAPSHOT_DIR / f"unavailable_{stem}.txt",
+        DEFAULT_PROBLEMS_DIR / f"unavailable_{stem}.txt",
     )
 
 
@@ -376,7 +378,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--unavailable-output",
-        help="Warning/error report path (default: snapshots/unavailable_<time>.txt).",
+        help=(
+            "Warning/error report path "
+            "(default: snapshots/problems/unavailable_<time>.txt)."
+        ),
     )
     parser.add_argument("--map", type=Path, default=DEFAULT_MAP, help="Column↔PV map.")
     parser.add_argument(
