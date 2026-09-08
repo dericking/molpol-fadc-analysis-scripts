@@ -55,6 +55,14 @@ class SnapshotRow:
     note: str
 
 
+_TIME_FORMATS = (
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+    "%a %b %d %H:%M:%S %Y",  # ctime: Mon Aug 17 15:43:02 2026
+    "%a %b %d %H:%M:%S %Y %Z",
+)
+
+
 def parse_query_time(args: argparse.Namespace, tz_name: str) -> datetime:
     zone = ZoneInfo(tz_name)
     if args.time and args.unix is not None:
@@ -64,16 +72,21 @@ def parse_query_time(args: argparse.Namespace, tz_name: str) -> datetime:
     if not args.time:
         raise SystemExit("Pass --time (JLab local / ISO) or --unix")
     text = args.time.strip()
+    parsed: datetime | None = None
     try:
         parsed = datetime.fromisoformat(text)
     except ValueError:
-        try:
-            parsed = datetime.strptime(text, "%Y-%m-%d %H:%M:%S")
-        except ValueError as exc:
-            raise SystemExit(
-                "Could not parse --time. Use 'YYYY-MM-DD HH:MM:SS' "
-                "(JLab local) or an ISO datetime."
-            ) from exc
+        for fmt in _TIME_FORMATS:
+            try:
+                parsed = datetime.strptime(text, fmt)
+                break
+            except ValueError:
+                continue
+    if parsed is None:
+        raise SystemExit(
+            "Could not parse --time. Use 'YYYY-MM-DD HH:MM:SS', "
+            "ISO, or ctime like 'Mon Aug 17 15:43:02 2026' (JLab local)."
+        )
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=zone)
     return parsed.astimezone(zone)
@@ -270,7 +283,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--time",
-        help="Run start as 'YYYY-MM-DD HH:MM:SS' (JLab local) or ISO datetime.",
+        help=(
+            "Run start as 'YYYY-MM-DD HH:MM:SS', ISO, or ctime "
+            "('Mon Aug 17 15:43:02 2026'). Naive times are JLab local."
+        ),
     )
     parser.add_argument(
         "--unix",

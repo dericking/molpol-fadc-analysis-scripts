@@ -22,23 +22,52 @@ safer pin for pandas/numpy wheels. Confirm with `python3.12 --version`.
 Needs a host that can reach `epicsweb.jlab.org` (onsite; the client does
 not support offsite auth).
 
-```bash
+**Shells by account** (do not mix them up):
+
+| Account | Login shell | Venv activate |
+|---------|-------------|----------------|
+| `a-molana` (development on `aonl1`, etc.) | **tcsh** | `source .venv/bin/activate.csh` |
+| `hamoller` | **bash** | `source .venv/bin/activate` |
+
+A lot of existing a-molana tooling is tcsh-specific. Keep examples and
+helper scripts working in tcsh when they will be run as `a-molana`.
+Sourcing the bash `activate` script under tcsh fails with
+`Badly placed ()'s`. Calling the venv binaries directly
+(`.venv/bin/python`, `.venv/bin/pip`) works in either shell.
+
+```tcsh
+# a-molana / tcsh
 cd EPICS-table-populator
 python3.12 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate.csh
+python --version          # 3.12.x, not the system 3.9 python3
 pip install -r requirements.txt
+```
 
+```bash
+# hamoller / bash
+source .venv/bin/activate
+```
+
+If you would rather not activate at all:
+
+```tcsh
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python fetch_epics_snapshot.py --list-map
+```
+
+```tcsh
 # Inspect the 100 confirmed pairs without querying MYA
-python3 fetch_epics_snapshot.py --list-map
+python fetch_epics_snapshot.py --list-map
 
 # Value at or before a run start (JLab local time)
-python3 fetch_epics_snapshot.py --time "2026-03-15 14:32:00" -o snapshot.txt
+python fetch_epics_snapshot.py --time "2026-03-15 14:32:00" -o snapshot.txt
 
 # Same, from Run_info.run_start_unix
-python3 fetch_epics_snapshot.py --unix 1742058720 --run-number 12345 -o snapshot.txt
+python fetch_epics_snapshot.py --unix 1742058720 --run-number 12345 -o snapshot.txt
 
 # Smoke test a handful of PVs
-python3 fetch_epics_snapshot.py --time "2026-03-15 14:32:00" --limit 5 -o smoke.txt
+python fetch_epics_snapshot.py --time "2026-03-15 14:32:00" --limit 5 -o smoke.txt
 ```
 
 `--time` without a timezone is `America/New_York`. The MYA **point** query
