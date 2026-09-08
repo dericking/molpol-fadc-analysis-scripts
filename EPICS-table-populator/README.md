@@ -7,10 +7,10 @@ archiver clients.
 
 ## Current status
 
-Step 1 is in place: fetch a snapshot from MYA into a typed text file. There
-is no MariaDB insert yet. A sample hamoller database can wait until the
-snapshot looks right on the server — the TSV already checks Don's column
-types.
+`epics_column_pv_map.txt` is the **single source of truth** (column, PV,
+SQL type, description). Fetch writes a full snapshot plus an unavailable-PV
+report under `snapshots/` so a later DB insert always has a text backup.
+There is no MariaDB insert yet.
 
 ## Fetch a snapshot (test onsite)
 
@@ -70,20 +70,32 @@ If you would rather not activate at all:
 # Inspect the 100 confirmed pairs without querying MYA
 python fetch_epics_snapshot.py --list-map
 
-# Value at or before a run start (JLab local time)
-python fetch_epics_snapshot.py --time "2026-03-15 14:32:00" -o snapshot.txt
+# Snapshot + unavailable report (defaults into snapshots/)
+python fetch_epics_snapshot.py --time "Thu Jul 10 12:08:06 PM EDT 2025" --run-number 12345
+
+# Warnings/errors only for mapped PVs MYA cannot serve
+python check_archived_pvs.py --time "Thu Jul 10 12:08:06 PM EDT 2025"
 
 # Same, from Run_info.run_start_unix
-python fetch_epics_snapshot.py --unix 1742058720 --run-number 12345 -o snapshot.txt
+python fetch_epics_snapshot.py --unix 1742058720 --run-number 12345
 
 # Smoke test a handful of PVs
-python fetch_epics_snapshot.py --time "2026-03-15 14:32:00" --limit 5 -o smoke.txt
+python fetch_epics_snapshot.py --time "2025-07-10 12:08:06" --limit 5
 ```
 
 `--time` without a timezone is `America/New_York`. The MYA **point** query
 returns the event **at or before** that timestamp (same idea as the old ADC
 `.set` print). Empty, disconnect, and type-mismatch values are written as
 `NULL` plus a status/note — nothing is invented.
+
+Every fetch writes two text files (gitignored under `snapshots/`):
+
+- `snapshot_<time>.txt` — full typed TSV (backup if hamoller is down)
+- `unavailable_<time>.txt` — ERROR/WARNING rows only
+
+`check_archived_pvs.py` writes the unavailable file and prints those lines
+to the terminal. `query_error` is an ERROR (name not in MYA). `disconnect`
+is a WARNING (in the archive, but IOC was down at that time).
 
 Output TSV columns: `column`, `pv`, `sql_type`, `status`, `coerced_value`,
 `raw_value`, `archive_time`, `mya_datatype`, `description`, `note`.
@@ -142,11 +154,14 @@ point.run()
 
 | File | Role |
 |------|------|
-| `epics_pv_list.txt` | Don’s PV list (name + `.set` print label). |
-| `epics_column_pv_map.txt` | Tab-separated `EPICS_data` column → PV. Skip `#` and blank lines. **100 confirmed pairs.** Unmatched items are commented at the bottom — do not insert those until resolved. |
-| `epics_column_types.txt` | Tab-separated column → Don’s SQL type (from the dashboard schema copy). |
-| `epics_schema.py` | Map/type parser and light coerce (empty → `NULL`; no invented values). |
-| `fetch_epics_snapshot.py` | MYA point query → typed TSV. No database writes. |
+| `epics_pv_list.txt` | Don’s original PV list (name + `.set` print label). Reference only. |
+| `schema/don_set_up_mariadb.original.sh` | Don’s `set_up_mariadb.sh` as downloaded from hamoller_analysis_tools. Reference only. |
+| `schema/don_set_up_mariadb.proposed.sh` | Same script with EPICS_data updates to send Don (`[PV: …]` comments kept). |
+| `epics_column_pv_map.txt` | **Base file** for fetch/insert. Space-aligned `column`, `pv`, `sql_type`, `description`. Matches the proposed schema (live hamoller still has `epics_n_pass` until Don applies it). |
+| `epics_schema.py` | Map parser and light coerce (empty → `NULL`; no invented values). |
+| `fetch_epics_snapshot.py` | MYA point query → `snapshots/snapshot_*.txt` plus unavailable report. No database writes. |
+| `check_archived_pvs.py` | Prints ERROR/WARNING for mapped PVs MYA cannot serve; writes `snapshots/unavailable_*.txt`. |
+| `snapshots/` | Text backups of each fetch (gitignored `*.txt`). |
 | `requirements.txt` | `jlab-archiver-client`. |
 
 Mapping was matched against `EPICS_data` `COLUMN_COMMENT` `[PV: …]` values
@@ -162,7 +177,7 @@ From old `.set` prints and the schema:
   The PV-list label “Helicity Mode ON/OFF Random/Toggle” is the print
   header, not the value.
 - **Text:** `HELDELAYd` → `epics_hel_delay` (`VARCHAR`; e.g. `8 windows`).
-- **Text:** laser modes, `epics_n_pass`, `epics_ihwp`.
+- **Text:** laser modes, `epics_n_pass_halla` (and hall b/c/d), `epics_ihwp`.
 - **Flags:** target limit / home switches are `TINYINT(1)`.
 - **Numeric:** everything else in the confirmed map (FLOAT / DECIMAL).
 
@@ -173,15 +188,15 @@ Do not invent values.
 
 Keep it boring. After the snapshot TSV looks right:
 
-1. Read `epics_column_pv_map.txt` → `{column: pv}`.
+1. Read `epics_column_pv_map.txt` → column, PV, SQL type.
 2. Connect to MariaDB with a **dedicated writer** account (not the
    dashboard SELECT-only user). Database name on the live host is
    `hamoller_db` (Docker test DB is `app_db`).
 3. Select candidate runs from `Run_info` (has start time; optionally
    skip rows that already have `EPICS_data`).
-4. For each run, query MYA at `run_start` (unix → datetime). Log PVs
-   that are missing, disconnected, or type-mismatch; leave those columns
-   `NULL`.
+4. For each run, query MYA at `run_start` (unix → datetime). Write
+   `snapshots/snapshot_*.txt` and `unavailable_*.txt`. Leave missing /
+   disconnected / type-mismatch columns `NULL`.
 5. Insert one row. Default: **do not overwrite** an existing
    `EPICS_data` row unless `--force` (or similar) is passed.
 6. Dry-run mode that prints the row and never writes.
@@ -191,17 +206,13 @@ live hamoller until the mapping and types are trusted.
 
 ## Open questions (do not guess)
 
-**PVs on Don’s list with no `EPICS_data` column** — skip until Don adds
-columns (schema is his):
+**Proposed `EPICS_data` columns** (in `schema/don_set_up_mariadb.proposed.sh`;
+do not ALTER live hamoller until Don applies them):
 
-- `MMSHLBPASS` / `MMSHLCPASS` / `MMSHLDPASS` (Hall B/C/D passes; table
-  only has Hall A `epics_n_pass`)
-- `MBD1H04HM` (MCZ1H04 **horizontal** corrector; table only has vertical
-  `epics_mcz1h0v_cur` → `MBD1H04VM`)
-- `pgunFreqDiv:A:frequencyVal` (HA RF frequency)
-- `IGL0I00HVPSkVolts` (injector gun voltage)
-- `HallAMolLock:Onoff` (beam-position lock)
-- `psub_cx_pos` / `psub_cy_pos` (injector spot x/y)
+- Rename `epics_n_pass` → `epics_n_pass_halla`; add `epics_n_pass_hallb/c/d`
+- Accelerator: `epics_ha_rf_freq`, `epics_gun_kV`, `epics_inj_spot_x/y`
+- After BPMs: `-- Beamline Locks` / `epics_mol_lock`
+- After vertical corrector: `epics_mcz1h0h_cur`
 
 **Table columns whose PVs are not on this list:**
 
