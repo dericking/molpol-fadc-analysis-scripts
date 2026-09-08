@@ -6,3 +6,6 @@ __pycache__/
 .pytest_cache/
 epics_snapshot*.txt
 epics_snapshot*.tsv
+EPICS-table-populator/snapshots/*.txt
+smoke.txt
+snapshot_*.txt
