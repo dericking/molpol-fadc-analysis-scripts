@@ -1,0 +1,109 @@
+HALLA:p                        Beam energy, MeV Hall A                   
+MMSINJEGAIN                    Injector energy, MeV                      
+MMSLIN1EGAIN                   South linac energy, MeV                   
+MMSLIN2EGAIN                   North linac energy, MeV                   
+MMSHLAPASS                     Passes Hall A                             
+MMSHLBPASS                     Passes Hall B                            
+MMSHLCPASS                     Passes Hall C                            
+MMSHLDPASS                     Passes Hall D                            
+hac_bcm_average                Beam Current Average                      
+hac_unser_read                 Current on Unser monitor                  
+hac_bcm_dvm1_current           Current on Upstream bcm                   
+hac_bcm_dvm2_current           Current on Downstream bcm                 
+IBC0L02Current                 Injector Full Current Monitor 02          
+hac_bcm_A1                     Upstream Cavity Coefficient               
+hac_bcm_A2                     Downstream Cavity Coefficient             
+IBC1H04CRCUR2                  Injector Current Monitor Hall A           
+IPM1H01.XPOS                   Beam Position BPM01  X, mm                
+IPM1H01.YPOS                   Beam Position BPM01  Y, mm                
+IPM1H04.XPOS                   Beam Position BPM04  X, mm                
+IPM1H04.YPOS                   Beam Position BPM04  Y, mm                
+IPM1H04A.XPOS                  Beam Position BPM04A  X, mm               
+IPM1H04A.YPOS                  Beam Position BPM04A  Y, mm               
+MQO1H02M                       Quad Q1 (Amps)                            
+MQM1H02M                       Quad Q2 (Amps)                            
+MQO1H03M                       Quad Q3 (Amps)                            
+MQO1H03AM                      Quad Q4 (Amps)                            
+MMA1H01M                       Dipole  (Amps)                            
+HAHFMROTENC                    Target Rotary Position(V)                 
+HAHFMROTSM.LLS                 Rotary Negative Limit Switch              
+HAHFMROTSM.HLS                 Rotary Positive Limit Switch              
+HAHFMROTSM.ATHM                Rotary Home(Center) Switch                
+HAHFMROTSM.RBV                 Rotary Position in deg(from controller)   
+HAHFMLINENC                    Target Linear Position(V)                 
+HAHFMLINSM.HLS                 Linear Extended Limit Switch              
+HAHFMLINSM.LLS                 Linear Retracted Limit Switch             
+HAHFMLINSM.ATHM                Linear Home switch                        
+HAHFMLINSM.RBV                 Linear Position in mm                     
+IGL1I00HALLAMODE               Laser mode  Hall A                        
+IGL1I00HALLBMODE               Laser mode  Hall B                        
+IGL1I00HALLCMODE               Laser mode  Hall C                        
+IGL1I00HALLDMODE               Laser mode  Hall D                        
+IGL1I00AI3                     Laser power Hall A                        
+IGL1I00AI4                     Laser power Hall B                        
+IGL1I00AI5                     Laser power Hall C                        
+IGL1I00AI6                     Laser power Hall D                        
+psub_aa_pos                    Laser attenuation Hall A          
+psub_ab_pos                    Laser attenuation Hall B                  
+psub_ac_pos                    Laser attenuation Hall C                  
+psub_ad_pos                    Laser attenuation Hall D                  
+SMRPOSA                        Slit Position Hall A                      
+SMRPOSB                        Slit Position Hall B                      
+SMRPOSC                        Slit Position Hall C                      
+SMRPOSD                        Slit Position Hall D                      
+IGL1I00OD16_16                 Laser 1/2 wave plate                      
+psub_pl_pos                    Rotating 1/2 wave plate                   
+MWF1I04.BDL                    VWien BdL                                 
+MWF1I04.S                      VWien field                               
+VWienAngle                     VWien filter angle, deg                   
+MFG1I04A.BDL                   Solenoid A BdL                            
+MFG1I04A.S                     Solenoid A field                          
+MFG1I04B.BDL                   Solenoid B BdL                            
+MFG1I04B.S                     Solenoid B field                          
+Phi_FG                         Solenoids angle, deg                      
+MWF1I06.BDL                    HWien BdL                                 
+MWF1I06.S                      HWien field                               
+HWienAngle                     HWien filter angle, deg                   
+HELPATTERNd                    Helicity Mode ON/OFF Random/Toggle        
+HELFREQ                        Helicity frequency                        
+HELDELAYd                      Helicity delay                            
+HELTSETTLEd                    MPS signal, usec                          
+HELTSTABLEd                    Helicity window, usec                     
+IGL1I00AI7                     Pockels Cell Voltage 1                    
+IGL1I00AI8                     Pockels Cell Voltage 2                    
+R0L1PMES                       Laser A RF phase degrees                  
+enlk4A:floatspare1             Laser A source current uA                 
+IPM1P02A.XPOS                  Beam Position BPM02A X, mm                
+IPM1P02A.YPOS                  Beam Position BPM02A Y, mm                
+MBD1H04HM                      MCZ1H04 horizontal corrector                
+MBD1H04VM                      MCZ1H04 vertical corrector                
+hamolpol:am430:target          AM430 Current Setpoint (A)                
+hamolpol:am430:targetRbck      AM430 Current Setpoint Readback (A)       
+hamolpol:am430:turnOn          AM430 Persistence Heater Control          
+hamolpol:am430:magCurrent      AM430 Measured Current (A)                
+hamolpol:am430:magVoltage      AM430 Measured Voltage (A)                
+hamolpol:am430:magField        AM430 Measured Field (T)                  
+hamolpol:am430:rampState       AMS430 Ramp State                         
+hamolpol:lk218_1:temp1         Cryocooler Temperature (K)                
+hamolpol:lk218_1:temp2         Magnet(T2) Temperature(K)                 
+hamolpol:lk218_1:temp6         Magnet Lead #1 (T6) Temperature(K)        
+hamolpol:lk218_1:temp7         Magnet Lead #2 (T7) Temperature(K)        
+hamolpol:lk450:fld             Magnet External Gaussmeter (kGs)          
+hamolpol:CP2800:compMins       Cryomech CP1110 Compressor Oper.Time (m)   
+hamolpol:CP2800:waterInTemp    Cryomech CP1110 Input Water Temp (C)      
+hamolpol:CP2800:waterOutTemp   Cryomech CP1110 Output Water Temp (C)     
+hamolpol:CP2800:pressHigh      Cryomech CP1110 High Side Pressure (PSI)   
+hamolpol:CP2800:pressLow       Cryomech CP1110 Low Side Pressure (PSI)   
+IHVHAPOL:03:000:VMon           HA Moller HV Readback Ch 1 (V)           
+IHVHAPOL:03:001:VMon           HA Moller HV Readback Ch 2 (V)           
+IHVHAPOL:03:002:VMon           HA Moller HV Readback Ch 3 (V)           
+IHVHAPOL:03:003:VMon           HA Moller HV Readback Ch 4 (V)           
+IHVHAPOL:03:004:VMon           HA Moller HV Readback Ch 5 (V)           
+IHVHAPOL:03:005:VMon           HA Moller HV Readback Ch 6 (V)           
+IHVHAPOL:03:006:VMon           HA Moller HV Readback Ch 7 (V)           
+IHVHAPOL:03:007:VMon           HA Moller HV Readback Ch 8 (V)           
+pgunFreqDiv:A:frequencyVal     HA RF frequency (499.0 or 249.5 MHz)
+IGL0I00HVPSkVolts              Injector gun voltage (kV)
+HallAMolLock:Onoff             HA Moller beam position lock On=1 Off=0
+psub_cx_pos                    Injector spot x-position
+psub_cy_pos                    Injector spot y-position

@@ -1,0 +1,166 @@
+# EPICS_data column  <->  EPICS PV
+#
+# Tab-separated. Skip blank lines and lines starting with #.
+# column_name	pv_name	description
+#
+# Confirmed by matching EPICS_data COLUMN_COMMENT [PV: ...] against epics_pv_list.txt.
+# Unmatched items are listed at the bottom — do not insert those until resolved.
+
+# --- Accelerator & Beam Energy ---
+epics_E_beam	HALLA:p	Beam energy, MeV Hall A
+epics_E_inj	MMSINJEGAIN	Injector energy, MeV
+epics_E_Slinac	MMSLIN1EGAIN	South linac energy, MeV
+epics_E_Nlinac	MMSLIN2EGAIN	North linac energy, MeV
+epics_n_pass	MMSHLAPASS	Passes Hall A
+
+# --- Beam Current Monitors (BCMs) & Unsers ---
+epics_bcm_avg	hac_bcm_average	Beam Current Average
+epics_unser	hac_unser_read	Current on Unser monitor
+epics_bcm_us	hac_bcm_dvm1_current	Current on Upstream bcm
+epics_bcm_ds	hac_bcm_dvm2_current	Current on Downstream bcm
+epics_inj_bcm_tot	IBC0L02Current	Injector Full Current Monitor 02
+epics_bcm_a1_coeff	hac_bcm_A1	Upstream Cavity Coefficient
+epics_bcm_a2_coeff	hac_bcm_A2	Downstream Cavity Coefficient
+epics_inj_bcm_halla	IBC1H04CRCUR2	Injector Current Monitor Hall A
+
+# --- Beam Position Monitors (BPMs) ---
+epics_bpm01_X	IPM1H01.XPOS	Beam Position BPM01 X, mm
+epics_bpm01_Y	IPM1H01.YPOS	Beam Position BPM01 Y, mm
+epics_bpm04_X	IPM1H04.XPOS	Beam Position BPM04 X, mm
+epics_bpm04_Y	IPM1H04.YPOS	Beam Position BPM04 Y, mm
+epics_bpm04a_X	IPM1H04A.XPOS	Beam Position BPM04A X, mm
+epics_bpm04a_Y	IPM1H04A.YPOS	Beam Position BPM04A Y, mm
+epics_bpm02a_X	IPM1P02A.XPOS	Beam Position BPM02A X, mm
+epics_bpm02a_Y	IPM1P02A.YPOS	Beam Position BPM02A Y, mm
+
+# --- Beamline Magnets ---
+epics_q1_cur	MQO1H02M	Quad Q1 (Amps)
+epics_q2_cur	MQM1H02M	Quad Q2 (Amps)
+epics_q3_cur	MQO1H03M	Quad Q3 (Amps)
+epics_q4_cur	MQO1H03AM	Quad Q4 (Amps)
+epics_dip_cur	MMA1H01M	Dipole (Amps)
+epics_mcz1h0v_cur	MBD1H04VM	MCZ1H04 vertical corrector
+
+# --- Target System ---
+epics_tgt_angle	HAHFMROTENC	Target Rotary Position(V)
+epics_tgt_rot_neglimit	HAHFMROTSM.LLS	Rotary Negative Limit Switch
+epics_tgt_rot_poslimit	HAHFMROTSM.HLS	Rotary Positive Limit Switch
+epics_tgt_rot_athome	HAHFMROTSM.ATHM	Rotary Home(Center) Switch
+epics_tgt_angle_deg	HAHFMROTSM.RBV	Rotary Position in deg(from controller)
+epics_tgt_lin_pos	HAHFMLINENC	Target Linear Position(V)
+epics_tgt_lin_hlimit	HAHFMLINSM.HLS	Linear Extended Limit Switch
+epics_tgt_lin_llmit	HAHFMLINSM.LLS	Linear Retracted Limit Switch
+epics_tgt_lin_athome	HAHFMLINSM.ATHM	Linear Home switch
+epics_tgt_lin_pos_mm	HAHFMLINSM.RBV	Linear Position in mm
+
+# --- Injector Laser & Slits ---
+epics_las_mode_halla	IGL1I00HALLAMODE	Laser mode Hall A
+epics_las_mode_hallb	IGL1I00HALLBMODE	Laser mode Hall B
+epics_las_mode_hallc	IGL1I00HALLCMODE	Laser mode Hall C
+epics_las_mode_halld	IGL1I00HALLDMODE	Laser mode Hall D
+epics_las_pow_halla	IGL1I00AI3	Laser power Hall A
+epics_las_pow_hallb	IGL1I00AI4	Laser power Hall B
+epics_las_pow_hallc	IGL1I00AI5	Laser power Hall C
+epics_las_pow_halld	IGL1I00AI6	Laser power Hall D
+epics_las_attn_halla	psub_aa_pos	Laser attenuation Hall A
+epics_las_attn_hallb	psub_ab_pos	Laser attenuation Hall B
+epics_las_attn_hallc	psub_ac_pos	Laser attenuation Hall C
+epics_las_attn_halld	psub_ad_pos	Laser attenuation Hall D
+epics_slit_halla	SMRPOSA	Slit Position Hall A
+epics_slit_hallb	SMRPOSB	Slit Position Hall B
+epics_slit_hallc	SMRPOSC	Slit Position Hall C
+epics_slit_halld	SMRPOSD	Slit Position Hall D
+epics_pockels_v1	IGL1I00AI7	Pockels Cell Voltage 1
+epics_pockels_v2	IGL1I00AI8	Pockels Cell Voltage 2
+epics_las_a_rf_phase	R0L1PMES	Laser A RF phase degrees
+epics_las_a_src_cur	enlk4A:floatspare1	Laser A source current uA
+
+# --- Polarization & Wien Filters / Waveplates ---
+epics_ihwp	IGL1I00OD16_16	Laser 1/2 wave plate
+epics_rhwp	psub_pl_pos	Rotating 1/2 wave plate
+epics_vwien_bdl	MWF1I04.BDL	VWien BdL
+epics_vwien_field	MWF1I04.S	VWien field
+epics_vwien_angle	VWienAngle	VWien filter angle, deg
+epics_sol_a_bdl	MFG1I04A.BDL	Solenoid A BdL
+epics_sol_a_field	MFG1I04A.S	Solenoid A field
+epics_sol_b_bdl	MFG1I04B.BDL	Solenoid B BdL
+epics_sol_b_field	MFG1I04B.S	Solenoid B field
+epics_sol_phi_fg	Phi_FG	Solenoids angle, deg
+epics_hwien_bdl	MWF1I06.BDL	HWien BdL
+epics_hwien_field	MWF1I06.S	HWien field
+epics_hwien_angle	HWienAngle	HWien filter angle, deg
+
+# --- Helicity Board Settings ---
+epics_hel_pattern	HELPATTERNd	Helicity Mode ON/OFF Random/Toggle
+epics_hel_freq	HELFREQ	Helicity frequency
+epics_hel_delay	HELDELAYd	Helicity delay
+epics_t_settle	HELTSETTLEd	MPS signal, usec
+epics_t_stable	HELTSTABLEd	Helicity window, usec
+
+# --- Superconducting Solenoid Magnet ---
+epics_mol_pow_sup_cur	hamolpol:am430:target	AM430 Current Setpoint (A)
+epics_mol_mag_cur_set	hamolpol:am430:targetRbck	AM430 Current Setpoint Readback (A)
+epics_mol_mag_htr_ctrl	hamolpol:am430:turnOn	AM430 Persistence Heater Control
+epics_mol_mag_cur_meas	hamolpol:am430:magCurrent	AM430 Measured Current (A)
+epics_mol_mag_v_meas	hamolpol:am430:magVoltage	AM430 Measured Voltage (A)
+epics_mol_mag_field_meas	hamolpol:am430:magField	AM430 Measured Field (T)
+epics_mol_mag_ramp_state	hamolpol:am430:rampState	AMS430 Ramp State
+epics_mol_cooler_temp	hamolpol:lk218_1:temp1	Cryocooler Temperature (K)
+epics_mol_mag_T2temp	hamolpol:lk218_1:temp2	Magnet(T2) Temperature(K)
+epics_mol_mag_lead1_temp	hamolpol:lk218_1:temp6	Magnet Lead #1 (T6) Temperature(K)
+epics_mol_mag_lead2_temp	hamolpol:lk218_1:temp7	Magnet Lead #2 (T7) Temperature(K)
+epics_mol_ext_gaussmeter	hamolpol:lk450:fld	Magnet External Gaussmeter (kGs)
+
+# --- Cryomech Compressor System ---
+epics_cryo_comp_op_time	hamolpol:CP2800:compMins	Cryomech CP1110 Compressor Oper.Time (min)
+epics_cryo_water_in_temp	hamolpol:CP2800:waterInTemp	Cryomech CP1110 Input Water Temp (C)
+epics_cryo_water_out_temp	hamolpol:CP2800:waterOutTemp	Cryomech CP1110 Output Water Temp (C)
+epics_cryo_press_high	hamolpol:CP2800:pressHigh	Cryomech CP1110 High Side Pressure (PSI)
+epics_cryo_press_low	hamolpol:CP2800:pressLow	Cryomech CP1110 Low Side Pressure (PSI)
+
+# --- Detector High Voltage Readbacks ---
+epics_det_hv_ch1	IHVHAPOL:03:000:VMon	HA Moller HV Readback Ch 1 (V)
+epics_det_hv_ch2	IHVHAPOL:03:001:VMon	HA Moller HV Readback Ch 2 (V)
+epics_det_hv_ch3	IHVHAPOL:03:002:VMon	HA Moller HV Readback Ch 3 (V)
+epics_det_hv_ch4	IHVHAPOL:03:003:VMon	HA Moller HV Readback Ch 4 (V)
+epics_det_hv_ch5	IHVHAPOL:03:004:VMon	HA Moller HV Readback Ch 5 (V)
+epics_det_hv_ch6	IHVHAPOL:03:005:VMon	HA Moller HV Readback Ch 6 (V)
+epics_det_hv_ch7	IHVHAPOL:03:006:VMon	HA Moller HV Readback Ch 7 (V)
+epics_det_hv_ch8	IHVHAPOL:03:007:VMon	HA Moller HV Readback Ch 8 (V)
+
+# =============================================================================
+# UNMATCHED — not used by an insert script until resolved
+# =============================================================================
+#
+# PVs in epics_pv_list.txt with no EPICS_data column:
+#   MMSHLBPASS                    Passes Hall B
+#   MMSHLCPASS                    Passes Hall C
+#   MMSHLDPASS                    Passes Hall D
+#   MBD1H04HM                     MCZ1H04 horizontal corrector
+#                                 (table only has vertical: epics_mcz1h0v_cur -> MBD1H04VM)
+#   pgunFreqDiv:A:frequencyVal    HA RF frequency (499.0 or 249.5 MHz)
+#   IGL0I00HVPSkVolts             Injector gun voltage (kV)
+#   HallAMolLock:Onoff            HA Moller beam position lock On=1 Off=0
+#   psub_cx_pos                   Injector spot x-position
+#   psub_cy_pos                   Injector spot y-position
+#
+# EPICS_data columns with no PV in epics_pv_list.txt:
+#   epics_tgt_foil                Target selection ID / state  (no [PV:] in schema either)
+#   epics_tgt_ladder_temp1        schema PV: hamolpol_tgt_ladder_temp1
+#   epics_tgt_ladder_temp2        schema PV: hamolpol_tgt_ladder_temp2
+#   epics_tgt_ladder_temp3        schema PV: hamolpol_tgt_ladder_temp3
+#   epics_tgt_motion_temp         schema PV: hamolpol_tgt_lifter_temp
+#   epics_tgt_flange_temp         schema PV: hamolpol_tgt_top_flange_temp
+#
+# Not PVs (skip):
+#   run_number
+#   last_updated
+#
+# Notes:
+#   PV list descriptions are the labels Don copied from the old ADC .set print.
+#   HELPATTERNd reports text (e.g. "Quartet"). Mapped to VARCHAR epics_hel_pattern.
+#     .set label: "Helicity Mode ON/OFF Random/Toggle"
+#     schema comment describes the value: pair / quartet / octet / ...
+#   HELDELAYd reports text (e.g. "8 windows"). Mapped to VARCHAR epics_hel_delay.
+#   MBD1H04VM  PV list: "MCZ1H04 vertical corrector"
+#              schema:  "MCZ1H0V vertical corrector" (column epics_mcz1h0v_cur)
