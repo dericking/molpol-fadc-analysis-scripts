@@ -1,11 +1,7 @@
 """MariaDB helper for writing one EPICS_data row.
 
-Credentials are dummy-empty unless set in the environment:
-
-  setenv DB_HOST ""
-  setenv DB_USER ""
-  setenv DB_PASS ""
-  setenv DB_NAME ""
+Credentials come from the four names in _ENV_NAMES (host, user, password,
+database). Those are the variable names on the server, not the values.
 
 Unavailable PVs stay NULL. Missing live columns are skipped. Neither
 aborts the insert.
@@ -27,6 +23,7 @@ COLUMN_ALIASES = {
 }
 
 _IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+# Server env var names, in order: host, user, password, database.
 _ENV_NAMES = ("DB_HOST", "DB_USER", "DB_PASS", "DB_NAME")
 
 
@@ -38,27 +35,20 @@ class DbConfig:
     database: str
 
     def missing(self) -> list[str]:
-        empty: list[str] = []
-        if not self.host:
-            empty.append("DB_HOST")
-        if not self.user:
-            empty.append("DB_USER")
-        if not self.password:
-            empty.append("DB_PASS")
-        if not self.database:
-            empty.append("DB_NAME")
-        return empty
+        values = (self.host, self.user, self.password, self.database)
+        return [name for name, value in zip(_ENV_NAMES, values) if not value]
 
     def summary(self) -> str:
         return f"{self.user}@{self.host}/{self.database}"
 
 
 def load_db_config() -> DbConfig:
+    host_var, user_var, pass_var, name_var = _ENV_NAMES
     return DbConfig(
-        host=os.environ.get("DB_HOST", ""),
-        user=os.environ.get("DB_USER", ""),
-        password=os.environ.get("DB_PASS", ""),
-        database=os.environ.get("DB_NAME", ""),
+        host=os.environ.get(host_var, ""),
+        user=os.environ.get(user_var, ""),
+        password=os.environ.get(pass_var, ""),
+        database=os.environ.get(name_var, ""),
     )
 
 
@@ -163,7 +153,7 @@ def insert_epics_row(
         fail(
             "database env not set: "
             + ", ".join(missing)
-            + "  (setenv DB_HOST / DB_USER / DB_PASS / DB_NAME)"
+            + "  (setenv " + " / ".join(_ENV_NAMES) + ")"
         )
         return 1
 
