@@ -10,9 +10,9 @@ The FADC Data Web Dashboard is a **separate project**. It is more actively maint
 
 ## Contents of Repository
 
-### EPICS-table-populator
+### EPICS-table-snapshotter
 
 Writer that fills `hamoller_db.EPICS_data` with a per-run snapshot of EPICS PVs from the JLab MYA archiver. The dashboard stays read-only; this project is the insert path.
 
-See [`EPICS-table-populator/README.md`](EPICS-table-populator/README.md).
+See [`EPICS-table-snapshotter/README.md`](EPICS-table-snapshotter/README.md).
 

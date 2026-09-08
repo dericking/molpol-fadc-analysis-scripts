@@ -120,7 +120,7 @@ the venv — use `deactivate` to drop back to the system Python.
 
 ```tcsh
 # a-molana / tcsh — one-time setup
-cd EPICS-table-populator
+cd EPICS-table-snapshotter
 python3.12 -m venv .venv
 source .venv/bin/activate.csh
 python --version          # 3.12.x, not the system 3.9 python3
@@ -129,7 +129,7 @@ pip install -r requirements.txt
 
 ```tcsh
 # a-molana / tcsh — each later login
-cd EPICS-table-populator
+cd EPICS-table-snapshotter
 source .venv/bin/activate.csh
 ```
 
