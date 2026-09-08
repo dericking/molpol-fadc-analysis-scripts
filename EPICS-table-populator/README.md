@@ -11,8 +11,85 @@ archiver clients.
 SQL type, description). Fetch writes a full snapshot under `snapshots/`
 and an unavailable-PV report under `snapshots/problems/`. Unavailable
 PVs print as `FAIL` and become `NULL`; they do not abort the run.
-`--insert` writes `EPICS_data` using `DB_HOST` / `DB_USER` / `DB_PASS` /
-`DB_NAME`.
+`--insert` writes `EPICS_data` using the four names in
+`epics_db.py` (`_ENV_NAMES`).
+
+## How the scripts fit together
+
+This directory is a small **writer stack**: map → archive query → typed
+text backup → MariaDB. The pieces are meant to be reused. Swap the map
+(and env names) for another table, or import the libraries from your
+own CLI / cron / analysis job. Leave the FADC dashboard out of this
+path; it stays SELECT-only.
+
+```
+epics_column_pv_map.txt          contract: column, PV, SQL type, description
+        │
+        ▼
+epics_schema.py                  parse map, coerce scalars (no MYA, no DB)
+        │
+        ├──────────────────────────────┐
+        ▼                              ▼
+fetch_epics_snapshot.py         check_archived_pvs.py
+  MYA Point (at or before t)      same query, problems file only
+        │
+        ├─ snapshots/snapshot_*.txt          full typed TSV (insert backup)
+        └─ snapshots/problems/unavailable_*  FAIL rows
+        │
+        ├── --insert ──────────────────┐
+        ▼                              ▼
+insert_epics_snapshot.py            epics_db.py
+  read a saved TSV                    connect, match live columns, INSERT/UPDATE
+        │                              │
+        └──────────────┬───────────────┘
+                       ▼
+                 hamoller_db.EPICS_data
+                 (FK: run_number → Run_info)
+```
+
+| Layer | File | Job | Import if you build your own |
+|---|---|---|---|
+| Contract | `epics_column_pv_map.txt` | One row per column to fill. Comments (`#`) are skipped. | Point `--map` at your copy. |
+| Types | `epics_schema.py` | `load_mapped_columns()`, `coerce_value()`. Empty / bad → `NULL`. | Yes. No network. |
+| Archive | `fetch_epics_snapshot.py` | `Point` query, write snapshot + problems, optional `--insert`. | `fetch_rows()`, `parse_query_time()`, `SnapshotRow`. |
+| Health | `check_archived_pvs.py` | Same MYA query; print `FAIL`; write problems file. Does not insert. | Optional cron check. |
+| DB | `epics_db.py` | Env credentials, live `INFORMATION_SCHEMA`, insert/update. | `insert_epics_row()`. |
+| Replay | `insert_epics_snapshot.py` | TSV → `insert_epics_row()`. No second MYA hit. | Use when hamoller was down. |
+
+At runtime, this one command fills `EPICS_data` for a run (MYA snapshot
+plus insert). `{DATE}` is the run start; `{RUN_NUMBER}` must already
+exist in `Run_info`:
+
+```tcsh
+python fetch_epics_snapshot.py --time "{DATE}" --run-number {RUN_NUMBER} --insert
+```
+
+That is **write path A** (used for run 559). `--dry-run` does the same
+without writing. `--force` overwrites an existing row.
+
+**Write path B** — fetch now, insert later (or retry):
+
+```tcsh
+python fetch_epics_snapshot.py --time "..." --run-number N
+python insert_epics_snapshot.py --snapshot snapshots/snapshot_runN_*.txt
+```
+
+Rules the stack already enforces (keep these if you fork it):
+
+- Unavailable PVs print `FAIL` and become `NULL`. The row still writes.
+- `Run_info` must already have that `run_number`.
+- Existing `EPICS_data` rows are not overwritten unless `--force`.
+- Columns missing on the live table are skipped. `COLUMN_ALIASES` in
+  `epics_db.py` maps `epics_n_pass_halla` → `epics_n_pass` until the
+  rename is applied.
+- Credentials are **server environment variables**, not files in git.
+  Change the names in `_ENV_NAMES` (host, user, password, database).
+
+To incorporate this in another project: copy the directory (or add it
+as a git subtree), keep `epics_schema.py` / `epics_db.py` / the fetch
+helpers as libraries, and replace `epics_column_pv_map.txt`. Your
+wrapper only needs a run number and a start time. `--dry-run` prints
+the SQL without writing.
 
 ## Fetch a snapshot (test onsite)
 
@@ -69,7 +146,7 @@ If you would rather not activate at all:
 ```
 
 ```tcsh
-# Inspect the 100 confirmed pairs without querying MYA
+# Inspect the mapped pairs without querying MYA
 python fetch_epics_snapshot.py --list-map
 
 # Snapshot in snapshots/; problems in snapshots/problems/
@@ -189,7 +266,9 @@ point.run()
 # point.event['data']['d']  — archive timestamp
 ```
 
-## What is already here
+## File inventory
+
+See **How the scripts fit together** for how these call each other.
 
 | File | Role |
 |------|------|
@@ -226,15 +305,11 @@ From old `.set` prints and the schema:
 Store what MYA returns after a light coerce (empty / disconnect → `NULL`).
 Do not invent values.
 
-## Intended pipeline (first insert version)
+## Intended pipeline
 
-1. Read `epics_column_pv_map.txt` → column, PV, SQL type.
-2. Connect with `DB_HOST` / `DB_USER` / `DB_PASS` / `DB_NAME`.
-3. `Run_info` row must already exist (`EPICS_data.run_number` FKs to it).
-4. Query MYA at run start. Write `snapshots/snapshot_*.txt` and
-   `snapshots/problems/unavailable_*.txt`. Unavailable columns are `NULL`.
-5. Insert one row. Default: do not overwrite unless `--force`.
-6. `--dry-run` prints the SQL and does not write.
+The stack above is the first insert version. Per run: map → MYA Point at
+run start → snapshot TSV + problems file → one `EPICS_data` row. Use
+`--dry-run` before a write; `--force` only to replace an existing row.
 
 ## Open questions (do not guess)
 
