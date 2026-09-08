@@ -4,13 +4,14 @@
 Queries jlab_archiver_client Point (value at or before the given time) for
 every confirmed column↔PV pair, coerces each value to Don's EPICS_data type,
 and writes a TSV. Missing / disconnect / type-mismatch values are NULL.
+Optional --insert writes the same row to EPICS_data (unavailable → NULL).
 
 Run this onsite (or on a host that can reach epicsweb.jlab.org/myquery).
-Python ≥ 3.11 (use python3.12 on the JLab server). Does not write to hamoller.
+Python ≥ 3.11 (use python3.12 on the JLab server).
 
 Example:
-  python3.12 fetch_epics_snapshot.py --time "2026-03-15 14:32:00" -o snapshot.txt
-  python3.12 fetch_epics_snapshot.py --unix 1742058720 --run-number 12345
+  python3.12 fetch_epics_snapshot.py --time "2026-03-15 14:32:00" --run-number 12345
+  python3.12 fetch_epics_snapshot.py --unix 1742058720 --run-number 12345 --insert --dry-run
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ from epics_schema import (
     coerce_value,
     load_mapped_columns,
 )
+from epics_db import fail, insert_epics_row
 
 PROBLEM_LEVELS = {
     "query_error": "ERROR",
@@ -336,11 +338,14 @@ def write_unavailable_report(
         )
 
 
-def print_unavailable_warnings(rows: list[SnapshotRow]) -> None:
+def print_unavailable_warnings(
+    rows: list[SnapshotRow], *, inserting: bool = False
+) -> None:
+    suffix = "  → NULL" if inserting else ""
     for row in problem_rows(rows):
-        level = PROBLEM_LEVELS[row.status]
         print(
-            f"{level}: {row.status}  {row.mapped.column}  {row.mapped.pv}  {row.note}",
+            f"FAIL: {row.status}  {row.mapped.column}  {row.mapped.pv}  "
+            f"{row.note}{suffix}",
             file=sys.stderr,
         )
 
@@ -349,7 +354,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Query MYA for one EPICS_data snapshot at (or before) a run start "
-            "and write a typed TSV. Does not insert into MariaDB."
+            "and write a typed TSV. Optional --insert writes EPICS_data."
         )
     )
     parser.add_argument(
@@ -416,7 +421,24 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
+    parser.add_argument(
+        "--insert",
+        action="store_true",
+        help="Insert the snapshot into EPICS_data (unavailable PVs → NULL).",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="With --insert, print the SQL and do not write.",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="With --insert, overwrite an existing EPICS_data row.",
+    )
     args = parser.parse_args(argv)
+    if getattr(args, "dry_run", False):
+        args.insert = True
     columns = load_mapped_columns(args.map)
 
     if args.columns:
@@ -476,7 +498,7 @@ def main(argv: list[str] | None = None) -> int:
             mya_time=mya_time,
             run_number=args.run_number,
         )
-    print_unavailable_warnings(rows)
+    print_unavailable_warnings(rows, inserting=True)
 
     counts: dict[str, int] = {}
     for row in rows:
@@ -487,7 +509,22 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"Wrote {out_path}  ({len(rows)} PVs; {summary})", file=sys.stderr)
     print(f"Wrote {unavail_path}  ({len(problem_rows(rows))} problems)", file=sys.stderr)
-    return 0 if counts.get("query_error", 0) == 0 else 1
+
+    if not args.insert:
+        return 0
+    if args.limit is not None or args.columns:
+        fail("--insert refuses --limit / --columns (partial row)")
+        return 1
+    if args.run_number is None:
+        fail("--insert requires --run-number")
+        return 1
+
+    return insert_epics_row(
+        args.run_number,
+        rows,
+        force=args.force,
+        dry_run=args.dry_run,
+    )
 
 
 if __name__ == "__main__":

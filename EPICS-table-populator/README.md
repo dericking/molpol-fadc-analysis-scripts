@@ -9,8 +9,10 @@ archiver clients.
 
 `epics_column_pv_map.txt` is the **single source of truth** (column, PV,
 SQL type, description). Fetch writes a full snapshot under `snapshots/`
-and an unavailable-PV report under `snapshots/problems/` so a later DB
-insert always has a text backup. There is no MariaDB insert yet.
+and an unavailable-PV report under `snapshots/problems/`. Unavailable
+PVs print as `FAIL` and become `NULL`; they do not abort the run.
+`--insert` writes `EPICS_data` using `DB_HOST` / `DB_USER` / `DB_PASS` /
+`DB_NAME`.
 
 ## Fetch a snapshot (test onsite)
 
@@ -73,6 +75,13 @@ python fetch_epics_snapshot.py --list-map
 # Snapshot in snapshots/; problems in snapshots/problems/
 python fetch_epics_snapshot.py --time "Thu Jul 10 12:08:06 PM EDT 2025" --run-number 12345
 
+# Same, then insert (unavailable PVs → NULL)
+python fetch_epics_snapshot.py --time "Thu Jul 10 12:08:06 PM EDT 2025" --run-number 12345 --insert --dry-run
+python fetch_epics_snapshot.py --time "Thu Jul 10 12:08:06 PM EDT 2025" --run-number 12345 --insert
+
+# Insert a snapshot already on disk
+python insert_epics_snapshot.py --snapshot snapshots/snapshot_run12345_20250710_120806.txt --dry-run
+
 # Warnings/errors only for mapped PVs MYA cannot serve
 python check_archived_pvs.py --time "Thu Jul 10 12:08:06 PM EDT 2025"
 
@@ -86,7 +95,36 @@ python fetch_epics_snapshot.py --time "2025-07-10 12:08:06" --limit 5
 `--time` without a timezone is `America/New_York`. The MYA **point** query
 returns the event **at or before** that timestamp (same idea as the old ADC
 `.set` print). Empty, disconnect, and type-mismatch values are written as
-`NULL` plus a status/note — nothing is invented.
+`NULL` plus a `FAIL` line — nothing is invented, and the process does not
+exit for those.
+
+## Database insert
+
+Dummy env (fill these in before `--insert`; they start empty):
+
+```tcsh
+setenv DB_HOST ""
+setenv DB_USER ""
+setenv DB_PASS ""
+setenv DB_NAME ""
+```
+
+```bash
+export DB_HOST=""
+export DB_USER=""
+export DB_PASS=""
+export DB_NAME=""
+```
+
+`--insert` requires `--run-number` and a matching `Run_info` row. Existing
+`EPICS_data` rows are left alone unless `--force`. Columns that are not on
+the live table are skipped (`FAIL`); `epics_n_pass_halla` writes
+`epics_n_pass` if that is still the live name.
+
+```tcsh
+python fetch_epics_snapshot.py --time "Thu Jul 10 12:08:06 PM EDT 2025" --run-number 12345 --insert --dry-run
+python insert_epics_snapshot.py --snapshot snapshots/snapshot_run12345_20250710_120806.txt --force
+```
 
 Every fetch writes two text files (gitignored `*.txt`):
 
@@ -94,8 +132,9 @@ Every fetch writes two text files (gitignored `*.txt`):
 - `snapshots/problems/unavailable_<time>.txt` — ERROR/WARNING rows only
 
 `check_archived_pvs.py` writes the problems file and prints those lines
-to the terminal. `query_error` is an ERROR (name not in MYA). `disconnect`
-is a WARNING (in the archive, but IOC was down at that time).
+to the terminal. Unavailable PVs print as `FAIL` and do not exit the
+process. `query_error` means the name is not in MYA; `disconnect` means
+the IOC was down at that time.
 
 Output TSV columns: `column`, `pv`, `sql_type`, `status`, `coerced_value`,
 `raw_value`, `archive_time`, `mya_datatype`, `description`, `note`.
@@ -159,11 +198,13 @@ point.run()
 | `schema/don_set_up_mariadb.proposed.sh` | Same script with EPICS_data updates to send Don (`[PV: …]` comments kept). |
 | `epics_column_pv_map.txt` | **Base file** for fetch/insert. Space-aligned `column`, `pv`, `sql_type`, `description`. Matches the proposed schema (live hamoller still has `epics_n_pass` until Don applies it). |
 | `epics_schema.py` | Map parser and light coerce (empty → `NULL`; no invented values). |
-| `fetch_epics_snapshot.py` | MYA point query → `snapshots/snapshot_*.txt` plus `snapshots/problems/unavailable_*.txt`. No database writes. |
-| `check_archived_pvs.py` | Prints ERROR/WARNING for mapped PVs MYA cannot serve; writes `snapshots/problems/unavailable_*.txt`. |
+| `fetch_epics_snapshot.py` | MYA point query → snapshot TSV + problems file. `--insert` writes `EPICS_data`. |
+| `insert_epics_snapshot.py` | Insert a saved `snapshots/snapshot_*.txt` into `EPICS_data`. |
+| `epics_db.py` | MariaDB connect/insert. Reads `DB_HOST` / `DB_USER` / `DB_PASS` / `DB_NAME`. |
+| `check_archived_pvs.py` | Prints `FAIL` for mapped PVs MYA cannot serve; writes `snapshots/problems/unavailable_*.txt`. |
 | `snapshots/` | Typed snapshot TSVs (gitignored `*.txt`). |
 | `snapshots/problems/` | Unavailable / error reports (gitignored `*.txt`). |
-| `requirements.txt` | `jlab-archiver-client`. |
+| `requirements.txt` | `jlab-archiver-client`, `PyMySQL`. |
 
 Mapping was matched against `EPICS_data` `COLUMN_COMMENT` `[PV: …]` values
 in the dashboard’s Docker schema copy (`docker/init/01_schema.sql` in
@@ -187,23 +228,13 @@ Do not invent values.
 
 ## Intended pipeline (first insert version)
 
-Keep it boring. After the snapshot TSV looks right:
-
 1. Read `epics_column_pv_map.txt` → column, PV, SQL type.
-2. Connect to MariaDB with a **dedicated writer** account (not the
-   dashboard SELECT-only user). Database name on the live host is
-   `hamoller_db` (Docker test DB is `app_db`).
-3. Select candidate runs from `Run_info` (has start time; optionally
-   skip rows that already have `EPICS_data`).
-4. For each run, query MYA at `run_start` (unix → datetime). Write
-   `snapshots/snapshot_*.txt` and `snapshots/problems/unavailable_*.txt`. Leave missing /
-   disconnected / type-mismatch columns `NULL`.
-5. Insert one row. Default: **do not overwrite** an existing
-   `EPICS_data` row unless `--force` (or similar) is passed.
-6. Dry-run mode that prints the row and never writes.
-
-Develop and test inserts against a copy of the schema first, never against
-live hamoller until the mapping and types are trusted.
+2. Connect with `DB_HOST` / `DB_USER` / `DB_PASS` / `DB_NAME`.
+3. `Run_info` row must already exist (`EPICS_data.run_number` FKs to it).
+4. Query MYA at run start. Write `snapshots/snapshot_*.txt` and
+   `snapshots/problems/unavailable_*.txt`. Unavailable columns are `NULL`.
+5. Insert one row. Default: do not overwrite unless `--force`.
+6. `--dry-run` prints the SQL and does not write.
 
 ## Open questions (do not guess)
 
@@ -227,8 +258,7 @@ across the run? Start is the `.set`-file analogue.
 
 ## Constraints
 
-- Do not put hamoller passwords, hosts, or production account names in
-  git. Env vars or a gitignored local config.
+- Credentials live in `DB_HOST` / `DB_USER` / `DB_PASS` / `DB_NAME`, not in git.
 - Do not ALTER live `EPICS_data`. Propose new columns to Don; experiment
   on a local schema copy.
 - Dashboard repo stays SELECT-only. This project is the writer.

@@ -2,7 +2,7 @@
 """Warn about mapped PVs that MYA cannot serve at a given time.
 
 Reads epics_column_pv_map.txt (the single source of truth), queries MYA
-Point for each confirmed PV, prints ERROR/WARNING lines, and writes
+Point for each confirmed PV, prints FAIL lines, and writes
 snapshots/problems/unavailable_<time>.txt. Does not write to hamoller.
 
   python check_archived_pvs.py --time "2025-07-10 12:08:06"
@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     parser.description = (
         "Report mapped PVs that are missing, disconnected, or not in MYA. "
-        "Writes snapshots/problems/unavailable_<time>.txt and prints ERROR/WARNING lines."
+        "Writes snapshots/problems/unavailable_<time>.txt and prints FAIL lines."
     )
     args = parser.parse_args(argv)
     columns = load_mapped_columns(args.map)
@@ -72,13 +72,13 @@ def main(argv: list[str] | None = None) -> int:
             mya_time=mya_time,
             run_number=args.run_number,
         )
-    print_unavailable_warnings(rows)
+    print_unavailable_warnings(rows, inserting=True)
     problems = problem_rows(rows)
     print(
         f"Wrote {unavail_path}  ({len(problems)} problems of {len(rows)} mapped PVs)",
         file=sys.stderr,
     )
-    return 1 if any(row.status == "query_error" for row in problems) else 0
+    return 0
 
 
 if __name__ == "__main__":
