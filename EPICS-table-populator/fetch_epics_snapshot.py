@@ -60,6 +60,8 @@ _TIME_FORMATS = (
     "%Y-%m-%d %H:%M",
     "%a %b %d %H:%M:%S %Y",  # ctime: Mon Aug 17 15:43:02 2026
     "%a %b %d %H:%M:%S %Y %Z",
+    "%a %b %d %I:%M:%S %p %Y",  # Thu Jul 10 12:08:06 PM 2025
+    "%a %b %d %I:%M:%S %p %Z %Y",  # Thu Jul 10 12:08:06 PM EDT 2025
 )
 
 
@@ -84,8 +86,9 @@ def parse_query_time(args: argparse.Namespace, tz_name: str) -> datetime:
                 continue
     if parsed is None:
         raise SystemExit(
-            "Could not parse --time. Use 'YYYY-MM-DD HH:MM:SS', "
-            "ISO, or ctime like 'Mon Aug 17 15:43:02 2026' (JLab local)."
+            "Could not parse --time. Use 'YYYY-MM-DD HH:MM:SS', ISO, "
+            "ctime like 'Mon Aug 17 15:43:02 2026', or "
+            "'Thu Jul 10 12:08:06 PM EDT 2025' (JLab local)."
         )
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=zone)
@@ -284,8 +287,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--time",
         help=(
-            "Run start as 'YYYY-MM-DD HH:MM:SS', ISO, or ctime "
-            "('Mon Aug 17 15:43:02 2026'). Naive times are JLab local."
+            "Run start as 'YYYY-MM-DD HH:MM:SS', ISO, ctime, or "
+            "12-hour with optional TZ ('Thu Jul 10 12:08:06 PM EDT 2025'). "
+            "Naive times are JLab local."
         ),
     )
     parser.add_argument(

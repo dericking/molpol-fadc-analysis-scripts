@@ -35,13 +35,23 @@ Sourcing the bash `activate` script under tcsh fails with
 `Badly placed ()'s`. Calling the venv binaries directly
 (`.venv/bin/python`, `.venv/bin/pip`) works in either shell.
 
+`python3.12 -m venv .venv` creates the environment **once**. After that,
+each new login only needs activate. `exit` leaves the SSH session, not
+the venv — use `deactivate` to drop back to the system Python.
+
 ```tcsh
-# a-molana / tcsh
+# a-molana / tcsh — one-time setup
 cd EPICS-table-populator
 python3.12 -m venv .venv
 source .venv/bin/activate.csh
 python --version          # 3.12.x, not the system 3.9 python3
 pip install -r requirements.txt
+```
+
+```tcsh
+# a-molana / tcsh — each later login
+cd EPICS-table-populator
+source .venv/bin/activate.csh
 ```
 
 ```bash
