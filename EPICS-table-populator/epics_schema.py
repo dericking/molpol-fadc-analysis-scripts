@@ -10,7 +10,9 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_MAP = HERE / "epics_column_pv_map.txt"
-DEFAULT_TYPES = HERE / "epics_column_types.txt"
+DEFAULT_SNAPSHOT_DIR = HERE / "snapshots"
+
+_FIELD_SPLIT = re.compile(r"\s{2,}")
 
 _SQL_RE = re.compile(
     r"^(?P<base>FLOAT|DECIMAL|DOUBLE|TINYINT|INT|VARCHAR|CHAR)"
@@ -49,19 +51,27 @@ def _skip_line(line: str) -> bool:
     return not stripped or stripped.startswith("#")
 
 
-def load_column_pv_map(path: Path = DEFAULT_MAP) -> list[tuple[str, str, str]]:
-    """Return (column, pv, description) for confirmed map rows."""
-    rows: list[tuple[str, str, str]] = []
+def parse_map_fields(line: str) -> list[str]:
+    """Split a map row on tabs or 2+ spaces (Don-style aligned columns)."""
+    if "\t" in line:
+        return [part.strip() for part in line.split("\t") if part.strip()]
+    return [part.strip() for part in _FIELD_SPLIT.split(line.strip()) if part.strip()]
+
+
+def load_column_pv_map(path: Path = DEFAULT_MAP) -> list[tuple[str, str, str, str]]:
+    """Return (column, pv, sql_type, description) for confirmed map rows."""
+    rows: list[tuple[str, str, str, str]] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         if _skip_line(line):
             continue
-        parts = line.split("\t")
-        if len(parts) < 2:
-            raise ValueError(f"Bad map line (need column and PV): {line!r}")
-        column = parts[0].strip()
-        pv = parts[1].strip()
-        description = parts[2].strip() if len(parts) > 2 else ""
-        rows.append((column, pv, description))
+        parts = parse_map_fields(line)
+        if len(parts) < 3:
+            raise ValueError(
+                f"Bad map line (need column, PV, SQL type): {line!r}"
+            )
+        column, pv, sql_type = parts[0], parts[1], parts[2]
+        description = " ".join(parts[3:]) if len(parts) > 3 else ""
+        rows.append((column, pv, sql_type, description))
     return rows
 
 
@@ -85,47 +95,17 @@ def parse_sql_type(sql: str) -> ColumnType:
     raise ValueError(f"Unsupported SQL type: {sql!r}")
 
 
-def load_column_types(path: Path = DEFAULT_TYPES) -> dict[str, ColumnType]:
-    types: dict[str, ColumnType] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if _skip_line(line):
-            continue
-        parts = line.split("\t")
-        if len(parts) < 2:
-            raise ValueError(f"Bad type line (need column and SQL type): {line!r}")
-        types[parts[0].strip()] = parse_sql_type(parts[1].strip())
-    return types
-
-
-def load_mapped_columns(
-    map_path: Path = DEFAULT_MAP,
-    types_path: Path = DEFAULT_TYPES,
-) -> list[MappedColumn]:
-    types = load_column_types(types_path)
+def load_mapped_columns(map_path: Path = DEFAULT_MAP) -> list[MappedColumn]:
+    """Load confirmed rows from the single column↔PV↔type map."""
     mapped: list[MappedColumn] = []
-    missing: list[str] = []
-    for column, pv, description in load_column_pv_map(map_path):
-        sql_type = types.get(column)
-        if sql_type is None:
-            missing.append(column)
-            continue
+    for column, pv, sql_type, description in load_column_pv_map(map_path):
         mapped.append(
             MappedColumn(
                 column=column,
                 pv=pv,
                 description=description,
-                sql_type=sql_type,
+                sql_type=parse_sql_type(sql_type),
             )
-        )
-    if missing:
-        raise ValueError(
-            "Columns in the PV map have no SQL type in "
-            f"{types_path.name}: {', '.join(missing)}"
-        )
-    extra = sorted(set(types) - {row.column for row in mapped})
-    if extra:
-        raise ValueError(
-            "SQL types file has columns not in the PV map: " + ", ".join(extra)
         )
     return mapped
 
