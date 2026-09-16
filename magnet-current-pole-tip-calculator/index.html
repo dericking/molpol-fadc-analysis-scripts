@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Møller Magnet Pole Tip to Current Calculator</title>
+  <style>
+    :root {
+      --white: #ffffff;
+      --paper: #fcfbfa;
+      --granite: #6b675e;
+      --navy: #2c3e50;
+      --ink: #26241f;
+      --shadow: #26241f96;
+      --blue: #01377d;
+    }
+    body {
+      font-family: "Iowan Old Style", Georgia, serif;
+      background: var(--paper);
+      color: var(--ink);
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 100%;
+      width: fit-content;
+      margin: 20px auto;
+      background: var(--white);
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px var(--shadow);
+      border: 1px solid var(--navy);
+    }
+    h1 {
+      margin: 0 0 0.4rem;
+      color: var(--navy);
+      font-size: 1.5rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    .subtitle {
+      text-align: center;
+      color: var(--granite);
+      margin: 0 0 1.5rem;
+      line-height: 1.45;
+    }
+    .subtitle a { color: var(--blue); }
+    h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--navy);
+      margin: 1.75rem 0 0.75rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 1px solid var(--granite);
+    }
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(3, max-content);
+      column-gap: 16px;
+      row-gap: 1rem;
+      justify-content: center;
+    }
+    .col-head {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--granite);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      align-self: end;
+    }
+    @media (max-width: 640px) {
+      .calc-grid {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+      .col-head { display: none; }
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+    input,
+    .result {
+      display: block;
+      width: 15ch;
+      max-width: 100%;
+      height: 2.25rem;
+      padding: 0 0.6rem;
+      border: 1px solid var(--navy);
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 1rem;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      line-height: calc(2.25rem - 2px);
+    }
+    .result {
+      background: var(--paper);
+      font-weight: 600;
+      color: var(--ink);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .result-raw {
+      font-weight: 400;
+      color: var(--granite);
+    }
+    .note {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: var(--granite);
+      text-align: center;
+    }
+    .panels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.75rem 2.5rem;
+      align-items: flex-start;
+      justify-content: center;
+      width: 100%;
+    }
+    .panel {
+      flex: 0 1 auto;
+      width: max-content;
+      max-width: 100%;
+      padding: 1rem 1.25rem 1.25rem;
+      background: var(--paper);
+      border: 1px dashed var(--granite);
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    .panel h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Møller Magnet Pole Tip to Current Calculator</h1>
+  <p class="subtitle" align="right">
+    Enter the desired quadrupole pole tip or dipole field in teslas and this page will output the desired magnet current. Formulae for the calculator can be found
+    <a href="https://github.com/JeffersonLab/halla_molpol_sim/blob/8c02dfcdba3fb5ef14946cfb300661696b13bfdf/src/MolPolEMFieldSetup.cc#401">here</a>.
+  </p>
+
+  <div class="panels">
+  <div class="panel">
+  <h2>Current to Pole Tip Conversion</h2>
+  <div class="calc-grid">
+    <span class="col-head">Input</span>
+    <span class="col-head">Rounded (4 dec)</span>
+    <span class="col-head">Unrounded (8 dec)</span>
+
+    <div>
+      <label for="txtCurrent1">Q1 Current (A)</label>
+      <input type="text" id="txtCurrent1" maxlength="15" onkeyup="q1T();" oninput="q1T();">
+    </div>
+    <div>
+      <label for="txtResult1">Q1 Pole Tip (T)</label>
+      <div class="result" id="txtResult1"></div>
+    </div>
+    <div>
+      <label for="txtResult1u">Q1 Pole Tip (T)</label>
+      <div class="result result-raw" id="txtResult1u"></div>
+    </div>
+
+    <div>
+      <label for="txtCurrent2">Q2 Current (A)</label>
+      <input type="text" id="txtCurrent2" maxlength="15" onkeyup="q2T();" oninput="q2T();">
+    </div>
+    <div>
+      <label for="txtResult2">Q2 Pole Tip (T)</label>
+      <div class="result" id="txtResult2"></div>
+    </div>
+    <div>
+      <label for="txtResult2u">Q2 Pole Tip (T)</label>
+      <div class="result result-raw" id="txtResult2u"></div>
+    </div>
+
+    <div>
+      <label for="txtCurrent3">Q3 Current (A)</label>
+      <input type="text" id="txtCurrent3" maxlength="15" onkeyup="q3T();" oninput="q3T();">
+    </div>
+    <div>
+      <label for="txtResult3">Q3 Pole Tip (T)</label>
+      <div class="result" id="txtResult3"></div>
+    </div>
+    <div>
+      <label for="txtResult3u">Q3 Pole Tip (T)</label>
+      <div class="result result-raw" id="txtResult3u"></div>
+    </div>
+
+    <div>
+      <label for="txtCurrent4">Q4 Current (A)</label>
+      <input type="text" id="txtCurrent4" maxlength="15" onkeyup="q4T();" oninput="q4T();">
+    </div>
+    <div>
+      <label for="txtResult4">Q4 Pole Tip (T)</label>
+      <div class="result" id="txtResult4"></div>
+    </div>
+    <div>
+      <label for="txtResult4u">Q4 Pole Tip (T)</label>
+      <div class="result result-raw" id="txtResult4u"></div>
+    </div>
+
+    <div>
+      <label for="txtCurrent5">DP Current (A)</label>
+      <input type="text" id="txtCurrent5" maxlength="15" onkeyup="dpT();" oninput="dpT();">
+    </div>
+    <div>
+      <label for="txtResult5">DP Pole Tip (T)</label>
+      <div class="result" id="txtResult5"></div>
+    </div>
+    <div>
+      <label for="txtResult5u">DP Pole Tip (T)</label>
+      <div class="result result-raw" id="txtResult5u"></div>
+    </div>
+  </div>
+  </div>
+
+  <div class="panel">
+  <h2>Pole Tip to Current Conversion</h2>
+  <div class="calc-grid">
+    <span class="col-head">Input</span>
+    <span class="col-head">Rounded (2 dec)</span>
+    <span class="col-head">Unrounded (8 dec)</span>
+
+    <div>
+      <label for="txtInputField1">Q1 Pole Tip (T)</label>
+      <input type="text" id="txtInputField1" maxlength="15" onkeyup="q1A();" oninput="q1A();">
+    </div>
+    <div>
+      <label for="txtCurrentResult1">Q1 Current (A)</label>
+      <div class="result" id="txtCurrentResult1"></div>
+    </div>
+    <div>
+      <label for="txtCurrentResult1u">Q1 Current (A)</label>
+      <div class="result result-raw" id="txtCurrentResult1u"></div>
+    </div>
+
+    <div>
+      <label for="txtInputField2">Q2 Pole Tip (T)</label>
+      <input type="text" id="txtInputField2" maxlength="15" onkeyup="q2A();" oninput="q2A();">
+    </div>
+    <div>
+      <label for="txtCurrentResult2">Q2 Current (A)</label>
+      <div class="result" id="txtCurrentResult2"></div>
+    </div>
+    <div>
+      <label for="txtCurrentResult2u">Q2 Current (A)</label>
+      <div class="result result-raw" id="txtCurrentResult2u"></div>
+    </div>
+
+    <div>
+      <label for="txtInputField3">Q3 Pole Tip (T)</label>
+      <input type="text" id="txtInputField3" maxlength="15" onkeyup="q3A();" oninput="q3A();">
+    </div>
+    <div>
+      <label for="txtCurrentResult3">Q3 Current (A)</label>
+      <div class="result" id="txtCurrentResult3"></div>
+    </div>
+    <div>
+      <label for="txtCurrentResult3u">Q3 Current (A)</label>
+      <div class="result result-raw" id="txtCurrentResult3u"></div>
+    </div>
+
+    <div>
+      <label for="txtInputField4">Q4 Pole Tip (T)</label>
+      <input type="text" id="txtInputField4" maxlength="15" onkeyup="q4A();" oninput="q4A();">
+    </div>
+    <div>
+      <label for="txtCurrentResult4">Q4 Current (A)</label>
+      <div class="result" id="txtCurrentResult4"></div>
+    </div>
+    <div>
+      <label for="txtCurrentResult4u">Q4 Current (A)</label>
+      <div class="result result-raw" id="txtCurrentResult4u"></div>
+    </div>
+
+    <div>
+      <label for="txtInputField5">DP Pole Tip (T)</label>
+      <input type="text" id="txtInputField5" maxlength="15" onkeyup="dpA();" oninput="dpA();">
+    </div>
+    <div>
+      <label for="txtCurrentResult5">DP Current (A)</label>
+      <div class="result" id="txtCurrentResult5"></div>
+    </div>
+    <div>
+      <label for="txtCurrentResult5u">DP Current (A)</label>
+      <div class="result result-raw" id="txtCurrentResult5u"></div>
+    </div>
+  </div>
+  </div>
+  </div>
+
+  <p class="note">Hall A Møller Polarimeter Field Calculator</p>
+</div>
+
+<script>
+function q1Field(I) {
+    var x = I / 300.;
+    return (0.0110605 + 5.33237*Math.pow(x,1) - 0.0142794*Math.pow(x,2) + 0.259313*Math.pow(x,3) + 0.0058174*Math.pow(x,4) - 0.831887*Math.pow(x,5)) * 5.08 / 36.5723;
+}
+function q2Field(I) {
+    var x = I / 300.;
+    return (0.0196438 + 5.35443*Math.pow(x,1) - 0.0297273*Math.pow(x,2) + 0.103505*Math.pow(x,3) - 0.0449275*Math.pow(x,4) - 0.211868*Math.pow(x,5)) * 5.08 / 44.76;
+}
+function q3Field(I) {
+    var x = I / 300.;
+    return (0.000632446 + 5.15178*Math.pow(x,1) - 0.00262778*Math.pow(x,2) - 0.107635*Math.pow(x,3) + 0.00209902*Math.pow(x,4) - 0.640635*Math.pow(x,5)) * 5.08 / 36.74;
+}
+function q4Field(I) {
+    var x = I / 300.;
+    return (0.0001732 + 5.2119*Math.pow(x,1) - 0.000732518*Math.pow(x,2) - 0.133423*Math.pow(x,3) + 0.000618402*Math.pow(x,4) - 0.647082*Math.pow(x,5)) * 5.08 / 36.50;
+}
+function dpField(I) {
+    return (-0.000039026 + 0.027051*Math.pow(I,1) - 0.0000000017799*Math.pow(I,2)) / 10.;
+}
+
+function fmt(x, decimals) {
+    if (!isFinite(x)) {
+        return '';
+    }
+    return (x < 0 ? '-' : '') + Math.abs(x).toFixed(decimals);
+}
+
+function currentFromField(fieldFn, B, iMax) {
+    var lo = -iMax;
+    var hi = iMax;
+    var fLo = fieldFn(lo);
+    var fHi = fieldFn(hi);
+    if ((B - fLo) * (B - fHi) > 0) {
+        return null;
+    }
+    var n;
+    for (n = 0; n < 80; n++) {
+        var mid = 0.5 * (lo + hi);
+        var fMid = fieldFn(mid);
+        if (Math.abs(fMid - B) < 1e-12) {
+            return mid;
+        }
+        if ((fMid - B) * (fLo - B) <= 0) {
+            hi = mid;
+            fHi = fMid;
+        } else {
+            lo = mid;
+            fLo = fMid;
+        }
+    }
+    return 0.5 * (lo + hi);
+}
+
+function setPair(idRound, idRaw, roundDec, value) {
+    var r = document.getElementById(idRound);
+    var u = document.getElementById(idRaw);
+    if (value === null) {
+        r.textContent = 'out of range';
+        u.textContent = 'out of range';
+        return;
+    }
+    if (value === '') {
+        r.textContent = '';
+        u.textContent = '';
+        return;
+    }
+    r.textContent = fmt(value, roundDec);
+    u.textContent = fmt(value, 8);
+}
+
+function showField(idRound, idRaw, I, fieldFn) {
+    var x = parseFloat(I);
+    if (I === '' || isNaN(x)) {
+        setPair(idRound, idRaw, 4, '');
+        return;
+    }
+    setPair(idRound, idRaw, 4, fieldFn(x));
+}
+
+function showCurrent(idRound, idRaw, Btxt, fieldFn, iMax) {
+    var B = parseFloat(Btxt);
+    if (Btxt === '' || isNaN(B)) {
+        setPair(idRound, idRaw, 2, '');
+        return;
+    }
+    setPair(idRound, idRaw, 2, currentFromField(fieldFn, B, iMax));
+}
+
+function q1T() { showField('txtResult1', 'txtResult1u', document.getElementById('txtCurrent1').value, q1Field); }
+function q2T() { showField('txtResult2', 'txtResult2u', document.getElementById('txtCurrent2').value, q2Field); }
+function q3T() { showField('txtResult3', 'txtResult3u', document.getElementById('txtCurrent3').value, q3Field); }
+function q4T() { showField('txtResult4', 'txtResult4u', document.getElementById('txtCurrent4').value, q4Field); }
+function dpT() { showField('txtResult5', 'txtResult5u', document.getElementById('txtCurrent5').value, dpField); }
+
+function q1A() { showCurrent('txtCurrentResult1', 'txtCurrentResult1u', document.getElementById('txtInputField1').value, q1Field, 320); }
+function q2A() { showCurrent('txtCurrentResult2', 'txtCurrentResult2u', document.getElementById('txtInputField2').value, q2Field, 320); }
+function q3A() { showCurrent('txtCurrentResult3', 'txtCurrentResult3u', document.getElementById('txtInputField3').value, q3Field, 320); }
+function q4A() { showCurrent('txtCurrentResult4', 'txtCurrentResult4u', document.getElementById('txtInputField4').value, q4Field, 320); }
+function dpA() { showCurrent('txtCurrentResult5', 'txtCurrentResult5u', document.getElementById('txtInputField5').value, dpField, 500); }
+</script>
+</body>
+</html>
